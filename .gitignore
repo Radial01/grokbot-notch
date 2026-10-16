@@ -1,0 +1,7 @@
+# macOS & build artifacts
+.DS_Store
+GrokBot Notch.app/
+*.log
+node_modules/
+.env
+.env.*

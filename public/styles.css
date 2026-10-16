@@ -1,0 +1,408 @@
+:root {
+  color-scheme: dark;
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --notch-width: 185px;
+  --notch-height: 32px;
+  --bot-ink: #8e59f8;
+  --pouch-bg: #000000;
+  --text-primary: #f5f5f7;
+  --text-secondary: rgba(245, 245, 247, 0.56);
+  --text-muted: rgba(245, 245, 247, 0.36);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+body.browser-preview {
+  background: #141417;
+}
+
+/* Anchored at top-center (y = 0) of the main Mac screen */
+.notch-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+/* The U-shaped Black Notch Pouch */
+.notch-pouch {
+  position: relative;
+  pointer-events: auto;
+  background: var(--pouch-bg);
+  width: 212px;
+  height: calc(var(--notch-height) + 24px);
+  border-radius: 0 0 18px 18px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.32),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.14);
+  transition:
+    width 300ms var(--spring),
+    height 300ms var(--spring),
+    border-radius 300ms var(--spring),
+    box-shadow 300ms var(--spring);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+
+.notch-pouch[data-expanded="true"] {
+  width: 268px;
+  height: 244px;
+  border-radius: 0 0 34px 34px;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.38),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.15),
+    inset 0.5px 0 0 rgba(255, 255, 255, 0.08),
+    inset -0.5px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Concave Top Ears that blend into the top bezel at y = 0 */
+.notch-ear {
+  position: absolute;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  fill: #000000;
+  pointer-events: none;
+}
+
+.notch-ear-left {
+  left: -17.5px;
+}
+
+.notch-ear-right {
+  right: -17.5px;
+}
+
+/* ============================================================================
+   COLLAPSED STATE BAR (peeks 24px below the 32px hardware camera notch)
+   ============================================================================ */
+.collapsed-bar {
+  margin-top: var(--notch-height);
+  width: 100%;
+  height: 24px;
+  padding: 0 14px 3px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 150ms ease;
+}
+
+.notch-pouch[data-expanded="true"] .collapsed-bar {
+  display: none;
+}
+
+.collapsed-mark {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.collapsed-name {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapsed-waves {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+}
+
+.collapsed-waves i {
+  display: block;
+  width: 2px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.collapsed-waves i:nth-child(2) {
+  height: 8px;
+}
+
+.collapsed-waves i:nth-child(3) {
+  height: 6px;
+}
+
+.notch-pouch[data-call="live"] .collapsed-waves i {
+  background: var(--bot-ink);
+}
+
+/* ============================================================================
+   EXPANDED POUCH CONTENT (Whiteboard layout: Bot -> Name -> < Waves >)
+   ============================================================================ */
+.expanded-content {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--notch-height) + 6px) 16px 15px;
+}
+
+.notch-pouch[data-expanded="true"] .expanded-content {
+  display: flex;
+  animation: pouchReveal 220ms var(--spring);
+}
+
+@keyframes pouchReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 1. TOP: Larger Flat GrokBot Character */
+.bot-character-btn {
+  position: relative;
+  width: 98px;
+  height: 98px;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 160ms var(--spring), background-color 160ms ease;
+}
+
+.bot-character-btn:hover {
+  background: rgba(255, 255, 255, 0.045);
+  transform: scale(1.04);
+}
+
+.bot-character-btn:active {
+  transform: scale(0.95);
+}
+
+.notch-pouch[data-call="live"] .bot-character-btn,
+.notch-pouch[data-call="connecting"] .bot-character-btn {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.bot-mark-mount {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+}
+
+/* Orange star badge on Chief (exact match to Image 1) */
+.main-star-badge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f59312;
+  border: 2px solid var(--pouch-bg);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.main-star-badge[hidden] {
+  display: none !important;
+}
+
+/* 2. MIDDLE: Bot Name + Subtle Caption */
+.bot-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 224px;
+  text-align: center;
+}
+
+.bot-name-label {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bot-status-caption {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--text-secondary);
+  max-width: 216px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bot-status-caption[hidden] {
+  display: none !important;
+}
+
+/* 3. BOTTOM ROW: < (Last Bot) | Audio Waves (Tap to Type) | > (Next Bot) */
+.bottom-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  gap: 6px;
+}
+
+.nav-chevron-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.52);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease, transform 120ms ease;
+}
+
+.nav-chevron-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-chevron-btn:active {
+  transform: scale(0.92);
+}
+
+/* Center Slot: Audio Waves or Tap-to-Type Input */
+.center-wave-slot {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-waves-btn {
+  width: 100%;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: text;
+  transition: background-color 140ms ease;
+}
+
+.audio-waves-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.audio-waves-btn[hidden] {
+  display: none !important;
+}
+
+.audio-waves-bars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3.5px;
+  height: 22px;
+}
+
+.audio-waves-bars span {
+  display: block;
+  width: 2.2px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  transition: height 70ms linear, background-color 180ms ease;
+}
+
+.notch-pouch[data-call="live"] .audio-waves-bars span {
+  background: var(--bot-ink);
+}
+
+.notch-pouch[data-call="connecting"] .audio-waves-bars span {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+/* Inline Type Input — Left-aligned text starting at the left edge */
+.type-form {
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0 11px;
+}
+
+.type-form[hidden] {
+  display: none !important;
+}
+
+.type-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #ffffff;
+  font: 12.5px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+  text-align: left;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.type-input::placeholder {
+  color: var(--text-muted);
+  text-align: left;
+}
