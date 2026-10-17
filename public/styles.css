@@ -2,7 +2,7 @@
   color-scheme: dark;
   --spring: cubic-bezier(0.22, 1, 0.36, 1);
   --notch-width: 185px;
-  --notch-height: 32px;
+  --notch-height: 0px;
   --bot-ink: #8e59f8;
   --pouch-bg: #000000;
   --text-primary: #f5f5f7;
@@ -50,9 +50,9 @@ body.browser-preview {
   position: relative;
   pointer-events: auto;
   background: var(--pouch-bg);
-  width: 212px;
-  height: calc(var(--notch-height) + 24px);
-  border-radius: 0 0 18px 18px;
+  width: max(var(--notch-width), 220px);
+  height: calc(var(--notch-height) + 18px);
+  border-radius: 0 0 8px 8px;
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.32),
     inset 0 -0.5px 0 rgba(255, 255, 255, 0.14);
@@ -68,8 +68,8 @@ body.browser-preview {
 }
 
 .notch-pouch[data-expanded="true"] {
-  width: 268px;
-  height: 244px;
+  width: 360px;
+  height: 510px;
   border-radius: 0 0 34px 34px;
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.38),
@@ -97,40 +97,67 @@ body.browser-preview {
 }
 
 /* ============================================================================
-   COLLAPSED STATE BAR (peeks 24px below the 32px hardware camera notch)
+   COLLAPSED STATE BAR (compact bot identity and work status)
    ============================================================================ */
 .collapsed-bar {
   margin-top: var(--notch-height);
   width: 100%;
-  height: 24px;
-  padding: 0 14px 3px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0 10px 1px;
   border: 0;
   background: transparent;
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
   opacity: 1;
   transition: opacity 150ms ease;
 }
+
+.collapsed-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.collapsed-status::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8c939d;
+}
+
+.collapsed-status[data-working="true"] { color: #8fe4a8; }
+.collapsed-status[data-working="true"]::before { background: #61d987; }
 
 .notch-pouch[data-expanded="true"] .collapsed-bar {
   display: none;
 }
 
 .collapsed-mark {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
+.collapsed-mark svg { width: 100%; height: 100%; }
+
 .collapsed-name {
-  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 11px;
+  line-height: 14px;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -177,7 +204,71 @@ body.browser-preview {
   width: 100%;
   height: 100%;
   padding: calc(var(--notch-height) + 6px) 16px 15px;
+  gap: 8px;
 }
+
+.expanded-content > * { flex-shrink: 0; }
+
+.recent-conversation {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 10px;
+}
+
+.recent-conversation h2 {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recent-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 4px 4px 0;
+}
+
+.recent-message {
+  flex-shrink: 0;
+  max-width: 94%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.recent-message[data-role="user"] {
+  align-self: flex-end;
+  background: rgba(100, 145, 255, 0.2);
+}
+
+.recent-message strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.recent-messages-status {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.recent-messages-status[hidden] { display: none; }
 
 .notch-pouch[data-expanded="true"] .expanded-content {
   display: flex;
@@ -229,6 +320,14 @@ body.browser-preview {
   height: 92px;
   display: grid;
   place-items: center;
+}
+
+.custom-bot-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 /* Orange star badge on Chief (exact match to Image 1) */

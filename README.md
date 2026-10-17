@@ -40,10 +40,12 @@ npm run install:app
 
 ## ✨ Features & Design
 
-- **Starts Collapsed in the Notch → Pops Down on `⌥Space`**
-  - Tucks neatly beneath your MacBook's physical camera housing showing a mini flat mark, your active bot's name, and subtle audio wave bars.
+- **Always-Visible Slim Notch → Expands on Hover or `⌥Space`**
+  - Move the pointer to the top center of the screen to open the pouch and preview the selected bot’s six latest messages and replies. Scroll to read longer messages; the preview refreshes every three seconds while open. Hovering does not take keyboard focus from your current app.
+  - A compact 18px bar stays visible at the top edge (just below the camera on notched screens), showing the selected bot’s icon, name, and Working/Idle status. The conversation collapses back to this bar half a second after you move away; typing and active voice calls keep it expanded. Keyboard shortcuts and the menu can also open it explicitly.
   - Press **`⌥Space`** from any app (powered by Carbon `RegisterEventHotKey` — works globally across full-screen apps with zero Accessibility permission prompts) or click the notch to pop down the U-shaped black Notch pouch.
 - **Authentic Flat GrokBot Characters**
+  - Custom bot icons from Desktop Grok Bot appear in both the collapsed notch and expanded pouch. Bots without a working custom icon use their animated character.
   - Renders all **25 procedural Grok Bot shapes** (`hex`, `tablet`, `pebble`, `cloud`, `squircle`, `teardrop`, `star`, `wedge`, `blob`, etc.) in their exact flat dark-mode palette with cutout eyes, eyelid blinking, cursor gaze tracking, and state-driven animations (`idle`, `listening`, `thinking`, `streaming`, `working`).
   - Automatically syncs your live bots, pinned order, and sections from Desktop Grok Bot (`ListGrokBotAgents` + local `sand-client-persistence`).
 - **Instant Bot Cycling (`←` / `→`)**

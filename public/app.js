@@ -85,6 +85,7 @@ const state = {
   expanded: false,
   typing: false,
   sendingText: false,
+  sendingTextBotId: null,
   activeAccountScope: null,
   bots: [],
   selectedBotId: null,
@@ -103,6 +104,7 @@ const dom = {
   collapsedBar: document.getElementById("collapsed-bar"),
   collapsedMark: document.getElementById("collapsed-mark"),
   collapsedName: document.getElementById("collapsed-name"),
+  collapsedStatus: document.getElementById("collapsed-status"),
   botCharacterBtn: document.getElementById("bot-character-btn"),
   botMarkMount: document.getElementById("bot-mark-mount"),
   mainStarBadge: document.getElementById("main-star-badge"),
@@ -113,7 +115,9 @@ const dom = {
   audioWavesBtn: document.getElementById("audio-waves-btn"),
   audioWavesBars: document.getElementById("audio-waves-bars"),
   typeForm: document.getElementById("type-form"),
-  typeInput: document.getElementById("type-input")
+  typeInput: document.getElementById("type-input"),
+  recentMessages: document.getElementById("recent-messages"),
+  recentMessagesStatus: document.getElementById("recent-messages-status")
 };
 
 function getSelectedBot() {
@@ -173,8 +177,21 @@ function currentMotionState() {
   return "idle";
 }
 
+const failedAvatarUrls = new Set();
+let lastCharacterAppearance = "";
+
+function customAvatarUrl(bot) {
+  const url = bot?.avatarPhotoUrl;
+  return typeof url === "string" && /^(data:image\/|https?:\/\/)/i.test(url) && !failedAvatarUrls.has(url) ? url : null;
+}
+
 function syncCharacterToBot(bot) {
   if (!bot) return;
+  const photoUrl = customAvatarUrl(bot);
+  const appearance = JSON.stringify([bot.id, bot.name, bot.avatarShape, bot.avatarColor, photoUrl]);
+  if (appearance === lastCharacterAppearance) return;
+  lastCharacterAppearance = appearance;
+  dom.botMarkMount.replaceChildren();
   const bodyShape = normalizeBodyShape(bot.avatarShape || "blob");
   botEngine.setBody(bodyShape);
   const ink = getFlatBotInk(bot.avatarColor);
@@ -188,6 +205,20 @@ function syncCharacterToBot(bot) {
     id: "collapsed-still-mark"
   });
   dom.collapsedName.textContent = bot.name;
+  if (photoUrl) {
+    for (const mount of [dom.collapsedMark, dom.botMarkMount]) {
+      const image = document.createElement("img");
+      image.className = "custom-bot-avatar";
+      image.alt = `${bot.name} icon`;
+      image.draggable = false;
+      image.addEventListener("error", () => {
+        failedAvatarUrls.add(photoUrl);
+        renderPouch();
+      }, { once: true });
+      image.src = photoUrl;
+      mount.replaceChildren(image);
+    }
+  }
 }
 
 function tickAnimation(now) {
@@ -201,13 +232,15 @@ function tickAnimation(now) {
     botStateMachine.advance(dt);
     botEngine.advance(dt);
 
-    const ink = getFlatBotInk(bot.avatarColor);
-    const flatAppearance = createAppearance(ink); // Pure flat silhouette with cutout eyes
-    const tree = buildFrameSvgTree(botEngine.frame(), flatAppearance, 184, "pouch-bot-mark", {
-      displaySize: 92,
-      extent: "100%"
-    });
-    patchSvgDom(dom.botMarkMount, tree);
+    if (!customAvatarUrl(bot)) {
+      const ink = getFlatBotInk(bot.avatarColor);
+      const flatAppearance = createAppearance(ink); // Pure flat silhouette with cutout eyes
+      const tree = buildFrameSvgTree(botEngine.frame(), flatAppearance, 184, "pouch-bot-mark", {
+        displaySize: 92,
+        extent: "100%"
+      });
+      patchSvgDom(dom.botMarkMount, tree);
+    }
 
     // Animate bottom audio wave bars (||||..||l|..)
     renderAudioWaveBars(now);
@@ -287,7 +320,10 @@ function setExpanded(expanded) {
   if (next) {
     playUiSound("open");
     refreshBootstrap();
+    refreshRecentMessages();
   } else {
+    recentMessagesRequest?.abort();
+    recentMessagesRequest = null;
     setTypingMode(false);
   }
   reportHitRectToNative();
@@ -889,11 +925,77 @@ async function stopVoiceCall({ silentChime = false } = {}) {
 // ============================================================================
 // RENDER & BOT SELECTION
 // ============================================================================
+let recentMessagesRequest = null;
+let recentMessagesBotId = null;
+let recentMessagesSignature = "";
+
+async function refreshRecentMessages() {
+  const bot = getSelectedBot();
+  if (!state.expanded || !bot) return;
+  if (recentMessagesBotId !== bot.id) {
+    recentMessagesRequest?.abort();
+    recentMessagesRequest = null;
+    recentMessagesBotId = bot.id;
+    recentMessagesSignature = "";
+    dom.recentMessages.replaceChildren();
+    dom.recentMessagesStatus.textContent = "Loading recent messages…";
+    dom.recentMessagesStatus.hidden = false;
+  }
+  if (recentMessagesRequest) return;
+  const request = new AbortController();
+  recentMessagesRequest = request;
+  try {
+    const response = await fetch(`/api/bot/${encodeURIComponent(bot.id)}/transcript`, { signal: request.signal });
+    if (!response.ok) throw new Error("Transcript unavailable");
+    const data = await response.json();
+    if (!data.ok || !Array.isArray(data.entries)) throw new Error("Transcript unavailable");
+    if (request.signal.aborted || !state.expanded || getSelectedBot()?.id !== bot.id) return;
+    const entries = data.entries.filter(entry =>
+      ["user", "assistant"].includes(entry.role) && typeof entry.text === "string" && entry.text.trim()
+    ).slice(-6);
+    const signature = JSON.stringify([bot.name, entries]);
+    if (signature !== recentMessagesSignature) {
+      const atBottom = dom.recentMessages.scrollHeight - dom.recentMessages.scrollTop - dom.recentMessages.clientHeight < 24;
+      const messages = entries.map(entry => {
+        const bubble = document.createElement("div");
+        bubble.className = "recent-message";
+        bubble.dataset.role = entry.role;
+        const label = document.createElement("strong");
+        label.textContent = entry.role === "user" ? "You" : bot.name;
+        const text = document.createElement("span");
+        text.textContent = entry.text;
+        bubble.append(label, text);
+        return bubble;
+      });
+      dom.recentMessages.replaceChildren(...messages);
+      if (atBottom || !recentMessagesSignature) dom.recentMessages.scrollTop = dom.recentMessages.scrollHeight;
+      recentMessagesSignature = signature;
+    }
+    dom.recentMessagesStatus.textContent = "No messages yet. Tap the waves to start a conversation.";
+    dom.recentMessagesStatus.hidden = entries.length > 0;
+  } catch (error) {
+    if (request.signal.aborted || getSelectedBot()?.id !== bot.id) return;
+    dom.recentMessagesStatus.textContent = "Couldn’t refresh messages. Retrying…";
+    dom.recentMessagesStatus.hidden = false;
+  } finally {
+    if (recentMessagesRequest === request) recentMessagesRequest = null;
+  }
+}
+
 function renderPouch() {
   const bot = getSelectedBot();
   if (!bot) return;
 
   syncCharacterToBot(bot);
+
+  const isWorking = Boolean(bot.isWorking ||
+    (state.sendingText && state.sendingTextBotId === bot.id) ||
+    (state.call.phase === "live" && ["agent-thinking", "agent-speaking", "working"].includes(state.call.activity)));
+  const workStatus = isWorking ? "Working" : "Idle";
+  dom.collapsedStatus.textContent = workStatus;
+  dom.collapsedStatus.dataset.working = String(isWorking);
+  dom.collapsedBar.setAttribute("aria-label", `${bot.name}, ${workStatus}. Expand recent conversation`);
+  dom.collapsedBar.title = `${bot.name} — ${workStatus}. Expand (⌥Space)`;
 
   dom.pouch.dataset.call = state.call.phase;
   dom.botNameLabel.textContent = bot.name;
@@ -921,6 +1023,8 @@ async function selectBot(botId) {
   botEngine.poke("spin");
   renderPouch();
 
+  refreshRecentMessages();
+
   fetch("/api/select-bot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -946,6 +1050,14 @@ function cycleBot(delta) {
 dom.collapsedBar.addEventListener("click", () => {
   setExpanded(true);
 });
+
+// Give clicks on the collapsed bar time to finish before moving its controls.
+let hoverExpandTimer = null;
+dom.collapsedBar.addEventListener("pointerenter", () => {
+  clearTimeout(hoverExpandTimer);
+  hoverExpandTimer = setTimeout(() => setExpanded(true), 180);
+});
+dom.collapsedBar.addEventListener("pointerleave", () => clearTimeout(hoverExpandTimer));
 
 dom.botCharacterBtn.addEventListener("click", async () => {
   if (state.call.phase === "idle") {
@@ -1009,6 +1121,7 @@ dom.typeForm.addEventListener("submit", async (e) => {
   }
 
   state.sendingText = true;
+  state.sendingTextBotId = bot.id;
   state.statusCaption = "Sending…";
   renderPouch();
 
@@ -1105,6 +1218,9 @@ window.addEventListener("keydown", (e) => {
 window.__notchCommand = async (cmd) => {
   if (!cmd || typeof cmd !== "object") return;
   switch (cmd.action) {
+    case "setExpanded":
+      setExpanded(cmd.expanded);
+      break;
     case "toggleExpand":
       setExpanded(!state.expanded);
       break;
@@ -1142,7 +1258,7 @@ window.__notchCommand = async (cmd) => {
       if (cmd.notchWidth && cmd.notchWidth > 100) {
         document.documentElement.style.setProperty("--notch-width", `${cmd.notchWidth}px`);
       }
-      if (cmd.notchHeight && cmd.notchHeight > 20) {
+      if (typeof cmd.notchHeight === "number" && cmd.notchHeight >= 0) {
         document.documentElement.style.setProperty("--notch-height", `${cmd.notchHeight}px`);
       }
       reportHitRectToNative();
@@ -1176,8 +1292,9 @@ async function refreshBootstrap() {
       state.statusCaption = "";
     }
 
+    // Photos, colors and names can change without roster IDs changing.
+    renderPouch();
     if (accountChanged || rosterChanged) {
-      renderPouch();
       postNativeMessage({
         type: "rosterLoaded",
         bots: state.bots.map((b) => ({ id: b.id, name: b.name, section: b.section })),
@@ -1194,6 +1311,7 @@ async function init() {
   reportHitRectToNative();
   // Periodically check for account or bot roster changes in Desktop Grok Bot
   setInterval(refreshBootstrap, 4000);
+  setInterval(refreshRecentMessages, 3000);
 }
 
 init();
