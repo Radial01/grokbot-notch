@@ -556,9 +556,10 @@ function readRosterAvatarPhotoDataUrl(photoKey) {
   return null;
 }
 
-function normalizeBot(rawBot, localSnap, savedVoiceOverrides = {}, activeScope = null) {
+function normalizeBot(rawBot, localSnap, savedVoiceOverrides = {}, activeScope = null, isLive = false) {
   const id = rawBot.agentId || rawBot.id;
   const localRow = localSnap.localBotsById.get(id) || {};
+  const activity = isLive ? rawBot : { ...localRow, ...rawBot };
   const override = savedVoiceOverrides[id] || {};
   const scope = localRow.accountScope || activeScope || localSnap.activeAccountScope || "default";
   const pinnedIds = localSnap.pinnedAgentIdsByScope.get(scope) || [];
@@ -604,6 +605,8 @@ function normalizeBot(rawBot, localSnap, savedVoiceOverrides = {}, activeScope =
     voiceLanguage,
     hasUnread: Boolean(rawBot.hasUnread ?? localRow.hasUnread),
     unreadCount: Number(rawBot.unreadCount ?? localRow.unreadCount ?? 0),
+    // Match Desktop Grok Bot: a pending user response stops the working indicator.
+    isWorking: activity.awaitingUserResponse == null && Boolean(activity.isRunning || activity.isComposingMessage),
     isPinned: pinnedIds.includes(id),
     isPrimaryAccount: activeScope ? scope === activeScope : localRow.isPrimaryAccount !== false,
     accountScope: scope,
@@ -643,7 +646,7 @@ async function getBootstrapData() {
   for (const agent of serverAgents) {
     const id = agent.agentId || agent.id;
     if (!id) continue;
-    botsById.set(id, normalizeBot(agent, localSnap, voiceOverrides, auth.accountScope));
+    botsById.set(id, normalizeBot(agent, localSnap, voiceOverrides, auth.accountScope, true));
   }
 
   for (const [id, localRow] of localSnap.localBotsById.entries()) {
@@ -793,6 +796,12 @@ async function getBotTranscript(agentId, callId = null) {
       }
     }
   }
+
+  // RPC pages may arrive newest-first; keep conversation previews chronological.
+  entries.sort((a, b) => {
+    if (a.seq != null && b.seq != null) return Number(a.seq) - Number(b.seq);
+    return Number(a.timestampMs || 0) - Number(b.timestampMs || 0);
+  });
 
   return {
     ok: true,

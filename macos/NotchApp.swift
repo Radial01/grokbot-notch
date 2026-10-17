@@ -236,7 +236,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private let audioController = NativeVoiceAudioController()
 
     private let panelWidth: CGFloat = 400
-    private let panelHeight: CGFloat = 320
+    private let panelHeight: CGFloat = 560
     private var hitRectInPanel = NSRect(x: 94, y: 0, width: 212, height: 56)
     private var isNotchOpen = false
     private var isTypingInNotch = false
@@ -248,6 +248,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private var globalMouseMonitor: Any?
     private var globalClickMonitor: Any?
     private var localMouseMonitor: Any?
+    private var hoverTimer: Timer?
+    private var pointerLeftAt: Date?
+    private var explicitlyPresented = false
+    private var pointerWasAtTopEdge = false
     private var toggleHotKeyRef: EventHotKeyRef?
     private var voiceHotKeyRef: EventHotKeyRef?
     private var leftArrowHotKeyRef: EventHotKeyRef?
@@ -277,6 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        hoverTimer?.invalidate()
         audioController.stop()
         if let hk1 = toggleHotKeyRef { UnregisterEventHotKey(hk1) }
         if let hk2 = voiceHotKeyRef { UnregisterEventHotKey(hk2) }
@@ -450,7 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 }
             }
         }
-        return (185, 32)
+        return (185, 0)
     }
 
     private func setupNotchPanel() {
@@ -488,6 +493,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
         audioController.webView = webView
         panel.contentView = webView
+        // Keep the slim collapsed notch visible, with transparent space passing clicks through.
+        panel.ignoresMouseEvents = true
         panel.orderFrontRegardless()
 
         if let url = URL(string: "http://127.0.0.1:4789/?native=1") {
@@ -541,6 +548,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             handleMouseMove()
             return event
         })
+        // Poll as well so reveal works without Accessibility event-monitor access.
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.updateMousePassthroughAndGaze()
+        }
     }
 
     private func updateMousePassthroughAndGaze() {
@@ -551,8 +562,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let localX = mouseScreen.x - panelFrame.minX
         let localTopY = panelFrame.maxY - mouseScreen.y
 
+        let atTopEdge = localTopY >= 0 && localTopY <= 6 && abs(localX - panelWidth / 2) <= 110
+        let enteredTopEdge = atTopEdge && !pointerWasAtTopEdge
+        pointerWasAtTopEdge = atTopEdge
+        if enteredTopEdge && !isNotchOpen {
+            pointerLeftAt = nil
+            sendCommandToWeb(["action": "setExpanded", "expanded": true])
+        }
+
         let paddedHitRect = hitRectInPanel.insetBy(dx: -10, dy: -6)
         let isInside = paddedHitRect.contains(NSPoint(x: localX, y: localTopY))
+
+        if atTopEdge || isInside || isTypingInNotch || currentCallPhase != "idle" || explicitlyPresented {
+            pointerLeftAt = nil
+        } else if let leftAt = pointerLeftAt {
+            if Date().timeIntervalSince(leftAt) >= 0.5 {
+                if isNotchOpen { sendCommandToWeb(["action": "setExpanded", "expanded": false]) }
+                pointerLeftAt = nil
+            }
+        } else {
+            pointerLeftAt = Date()
+        }
 
         if panel.ignoresMouseEvents == isInside {
             panel.ignoresMouseEvents = !isInside
@@ -623,6 +653,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
 
     @objc func toggleNotchExpand() {
+        explicitlyPresented = true
         repositionNotchPanel()
         panel.ignoresMouseEvents = false
         NSApp.activate(ignoringOtherApps: true)
@@ -631,6 +662,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
 
     @objc func toggleVoiceCall() {
+        explicitlyPresented = true
         repositionNotchPanel()
         panel.ignoresMouseEvents = false
         NSApp.activate(ignoringOtherApps: true)
@@ -653,6 +685,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     @objc private func selectBotFromMenu(_ sender: NSMenuItem) {
         guard let botId = sender.representedObject as? String else { return }
         selectedBotId = botId
+        explicitlyPresented = true
         panel.ignoresMouseEvents = false
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -686,12 +719,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             let h = CGFloat((body["height"] as? NSNumber)?.doubleValue ?? 56)
             hitRectInPanel = NSRect(x: x, y: y, width: w, height: h)
             let wasOpen = isNotchOpen
+            let wasTyping = isTypingInNotch
             isNotchOpen = (body["isOpen"] as? Bool) ?? false
+            if !isNotchOpen { explicitlyPresented = false }
             isTypingInNotch = (body["isTyping"] as? Bool) ?? false
 
             updateExpandedNavigationHotKeys(active: isNotchOpen, includeArrows: isNotchOpen && !isTypingInNotch)
 
-            if isNotchOpen && !wasOpen {
+            // Hover previews must not steal focus from the user's current app.
+            if (isNotchOpen && !wasOpen && explicitlyPresented) || (isTypingInNotch && !wasTyping) {
                 panel.ignoresMouseEvents = false
                 NSApp.activate(ignoringOtherApps: true)
                 panel.makeKeyAndOrderFront(nil)

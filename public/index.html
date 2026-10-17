@@ -19,12 +19,10 @@
         </svg>
 
         <!-- COLLAPSED BAR (visible when data-expanded="false") -->
-        <button id="collapsed-bar" class="collapsed-bar" type="button" title="Expand GrokBot Notch (⌥Space)">
+        <button id="collapsed-bar" class="collapsed-bar" type="button" aria-label="Expand recent conversation" title="Expand GrokBot Notch (⌥Space)">
           <span id="collapsed-mark" class="collapsed-mark"></span>
           <span id="collapsed-name" class="collapsed-name">Chief</span>
-          <span class="collapsed-waves" aria-hidden="true">
-            <i></i><i></i><i></i><i></i>
-          </span>
+          <span id="collapsed-status" class="collapsed-status" data-working="false">Idle</span>
         </button>
 
         <!-- EXPANDED POUCH CONTENT (Bot -> Name -> < Audio Waves (Tap to Type) >) -->
@@ -49,6 +47,12 @@
             <span id="bot-name-label" class="bot-name-label">Chief</span>
             <span id="bot-status-caption" class="bot-status-caption" hidden></span>
           </div>
+
+          <section class="recent-conversation" aria-label="Recent conversation">
+            <h2>Recent conversation</h2>
+            <div id="recent-messages" class="recent-messages" tabindex="0" aria-label="Recent messages and replies"></div>
+            <p id="recent-messages-status" class="recent-messages-status" role="status">Hover to load recent messages.</p>
+          </section>
 
           <!-- Bottom Row: < (Last Bot) | Audio Waves (Tap to Type) | > (Next Bot) -->
           <div class="bottom-nav-row">
