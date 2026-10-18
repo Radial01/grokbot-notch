@@ -1,3 +1,4 @@
+import { renderMarkdown } from "/markdown.js";
 import {
   createMotionEngine,
   createStateMachine,
@@ -961,9 +962,11 @@ async function refreshRecentMessages() {
         bubble.className = "recent-message";
         bubble.dataset.role = entry.role;
         const label = document.createElement("strong");
+        label.className = "recent-message-label";
         label.textContent = entry.role === "user" ? "You" : bot.name;
-        const text = document.createElement("span");
-        text.textContent = entry.text;
+        const text = document.createElement("div");
+        text.className = "message-markdown";
+        text.append(renderMarkdown(entry.text));
         bubble.append(label, text);
         return bubble;
       });

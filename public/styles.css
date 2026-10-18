@@ -256,12 +256,61 @@ body.browser-preview {
   background: rgba(100, 145, 255, 0.2);
 }
 
-.recent-message strong {
+.recent-message > .recent-message-label {
   display: block;
   margin-bottom: 3px;
   font-size: 10px;
   color: var(--text-secondary);
 }
+
+.message-markdown { white-space: normal; }
+.message-markdown, .message-markdown * { -webkit-user-select: text; user-select: text; }
+.message-markdown > :first-child { margin-top: 0; }
+.message-markdown > :last-child { margin-bottom: 0; }
+.message-markdown p,
+.message-markdown ul,
+.message-markdown ol,
+.message-markdown pre,
+.message-markdown blockquote { margin: 6px 0; }
+.message-markdown ul { list-style: disc outside; }
+.message-markdown ol { list-style: decimal outside; }
+.message-markdown ul, .message-markdown ol { padding-left: 20px; }
+.message-markdown li { margin: 2px 0; }
+.message-markdown li > p { margin: 2px 0; }
+.message-markdown h1, .message-markdown h2, .message-markdown h3,
+.message-markdown h4, .message-markdown h5, .message-markdown h6 {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  margin: 8px 0 4px;
+}
+.message-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 3px;
+  padding: 1px 3px;
+}
+.message-markdown pre {
+  overflow-x: auto;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 5px;
+  padding: 7px;
+}
+.message-markdown pre code { background: none; padding: 0; }
+.message-markdown blockquote {
+  border-left: 2px solid var(--text-secondary);
+  padding-left: 8px;
+  color: var(--text-secondary);
+}
+.message-markdown a { color: #a9c7ff; text-decoration: underline; }
+.message-markdown table { display: block; overflow-x: auto; border-collapse: collapse; }
+.message-markdown th, .message-markdown td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 3px 6px;
+}
+.message-markdown hr { border: 0; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 8px 0; }
 
 .recent-messages-status {
   font-size: 11px;
