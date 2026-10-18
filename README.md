@@ -46,6 +46,7 @@ npm run install:app
   - Press **`⌥Space`** from any app (powered by Carbon `RegisterEventHotKey` — works globally across full-screen apps with zero Accessibility permission prompts) or click the notch to pop down the U-shaped black Notch pouch.
 - **Authentic Flat GrokBot Characters**
   - Custom bot icons from Desktop Grok Bot appear in both the collapsed notch and expanded pouch. Bots without a working custom icon use their animated character.
+  - Recent messages render Markdown, including `-` bullet lists, numbered and nested lists, bold, italics, headings, links, quotes, code blocks, and tables.
   - Renders all **25 procedural Grok Bot shapes** (`hex`, `tablet`, `pebble`, `cloud`, `squircle`, `teardrop`, `star`, `wedge`, `blob`, etc.) in their exact flat dark-mode palette with cutout eyes, eyelid blinking, cursor gaze tracking, and state-driven animations (`idle`, `listening`, `thinking`, `streaming`, `working`).
   - Automatically syncs your live bots, pinned order, and sections from Desktop Grok Bot (`ListGrokBotAgents` + local `sand-client-persistence`).
 - **Instant Bot Cycling (`←` / `→`)**
